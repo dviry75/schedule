@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -38,11 +38,11 @@ enum ExecutionType {
 }
 
 model User {
-  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String               @id @default(uuid())
   email           String               @unique
   passwordHash    String               @map("password_hash")
-  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
   memberships     OrganizationMember[]
   createdSchedules Schedule[]          @relation("created_schedules")
 
@@ -50,10 +50,10 @@ model User {
 }
 
 model Organization {
-  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String               @id @default(uuid())
   name        String
-  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
   members     OrganizationMember[]
   schedules   Schedule[]
 
@@ -61,11 +61,11 @@ model Organization {
 }
 
 model OrganizationMember {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId  String       @map("organization_id") @db.Uuid
-  userId          String       @map("user_id") @db.Uuid
+  id              String       @id @default(uuid())
+  organizationId  String       @map("organization_id")
+  userId          String       @map("user_id")
   role            Role
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at")
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -77,21 +77,21 @@ model OrganizationMember {
 }
 
 model Schedule {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId    String          @map("organization_id") @db.Uuid
-  createdByUserId   String          @map("created_by_user_id") @db.Uuid
+  id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
+  createdByUserId   String          @map("created_by_user_id")
   webhookUrl        String          @map("webhook_url")
   httpMethod        HttpMethod      @default(POST) @map("http_method")
   payload           Json
-  nextRunAt         DateTime        @map("next_run_at") @db.Timestamptz(6)
+  nextRunAt         DateTime        @map("next_run_at")
   status            ScheduleStatus
   retryCount        Int             @default(0) @map("retry_count")
   maxRetries        Int             @default(3) @map("max_retries")
-  lockedAt          DateTime?       @map("locked_at") @db.Timestamptz(6)
+  lockedAt          DateTime?       @map("locked_at")
   lastError         String?         @map("last_error")
-  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt         DateTime?       @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  deletedAt         DateTime?       @map("deleted_at")
   createdSource     CreatedSource   @map("created_source")
 
   organization      Organization    @relation(fields: [organizationId], references: [id])
@@ -105,9 +105,9 @@ model Schedule {
 }
 
 model ExecutionLog {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  scheduleId    String         @map("schedule_id") @db.Uuid
-  executedAt    DateTime       @default(now()) @map("executed_at") @db.Timestamptz(6)
+  id            String         @id @default(uuid())
+  scheduleId    String         @map("schedule_id")
+  executedAt    DateTime       @default(now()) @map("executed_at")
   statusCode    Int?           @map("status_code")
   durationMs    Int            @map("duration_ms")
   success       Boolean

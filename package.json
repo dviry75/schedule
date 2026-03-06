@@ -4,21 +4,29 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "npm run dev:all",
+    "dev:all": "concurrently -k -n api,worker,frontend -c blue,magenta,green \"npm run dev:api\" \"npm run dev:worker\" \"npm run frontend:dev\"",
+    "dev:api": "tsx watch src/server.ts",
     "dev:worker": "tsx watch src/workers/worker.ts",
-    "build": "tsc -p tsconfig.json",
+    "frontend:dev": "node scripts/frontend-run.cjs run dev",
+    "frontend:build": "node scripts/frontend-run.cjs run build",
+    "frontend:install": "node scripts/frontend-run.cjs install",
+    "build": "npm run frontend:install && npm run frontend:build && tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "start:worker": "node dist/workers/worker.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "install:all": "npm install && npm run frontend:install"
   },
   "dependencies": {
     "@fastify/cors": "^10.1.0",
     "@fastify/jwt": "^9.1.0",
+    "@fastify/static": "^8.1.0",
     "@fastify/sensible": "^5.6.0",
     "@prisma/client": "^6.5.0",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "p-limit": "^6.2.0",
     "pino": "^9.6.0",
@@ -28,6 +36,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.10",
+    "concurrently": "^9.1.2",
     "prisma": "^6.5.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
