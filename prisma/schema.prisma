@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ScheduleStatus {
+  pending
+  running
+  success
+  failed
+  cancelled
+  expired
+}
+
+enum HttpMethod {
+  POST
+}
+
+enum CreatedSource {
+  api
+  ui
+  manual_resend
+}
+
+enum ExecutionType {
+  executed
+  skipped_timeout
+}
+
+model User {
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String               @unique
+  passwordHash    String               @map("password_hash")
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  memberships     OrganizationMember[]
+  createdSchedules Schedule[]          @relation("created_schedules")
+
+  @@map("users")
+}
+
+model Organization {
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  members     OrganizationMember[]
+  schedules   Schedule[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  role            Role
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Schedule {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String          @map("organization_id") @db.Uuid
+  createdByUserId   String          @map("created_by_user_id") @db.Uuid
+  webhookUrl        String          @map("webhook_url")
+  httpMethod        HttpMethod      @default(POST) @map("http_method")
+  payload           Json
+  nextRunAt         DateTime        @map("next_run_at") @db.Timestamptz(6)
+  status            ScheduleStatus
+  retryCount        Int             @default(0) @map("retry_count")
+  maxRetries        Int             @default(3) @map("max_retries")
+  lockedAt          DateTime?       @map("locked_at") @db.Timestamptz(6)
+  lastError         String?         @map("last_error")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?       @map("deleted_at") @db.Timestamptz(6)
+  createdSource     CreatedSource   @map("created_source")
+
+  organization      Organization    @relation(fields: [organizationId], references: [id])
+  createdByUser     User            @relation("created_schedules", fields: [createdByUserId], references: [id])
+  executionLogs     ExecutionLog[]
+
+  @@index([status, nextRunAt])
+  @@index([organizationId])
+  @@index([lockedAt])
+  @@map("schedules")
+}
+
+model ExecutionLog {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId    String         @map("schedule_id") @db.Uuid
+  executedAt    DateTime       @default(now()) @map("executed_at") @db.Timestamptz(6)
+  statusCode    Int?           @map("status_code")
+  durationMs    Int            @map("duration_ms")
+  success       Boolean
+  executionType ExecutionType  @map("execution_type")
+
+  schedule      Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([executedAt])
+  @@map("execution_logs")
+}
